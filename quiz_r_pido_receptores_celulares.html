@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Rápido: Receptores Celulares</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#0b132b',
+                            card: '#1c2541',
+                            accent: '#48cae4',
+                            correct: '#10b981',
+                            incorrect: '#ef4444',
+                            border: '#3a506b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b132b;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Efeito de pulso suave no botão de avançar */
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .animate-bounce-subtle {
+            animation: pulse-subtle 2s infinite ease-in-out;
+        }
+
+        /* Suavização de transições */
+        .quiz-transition {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Estilização customizada da barra de rolagem do modal/painel */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b132b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a506b;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between max-w-md mx-auto relative border-x border-slate-800 shadow-2xl bg-slate-950">
+
+    <!-- Cabeçalho com Barra de Progresso Estilo App -->
+    <header class="p-4 bg-slate-900/90 backdrop-blur sticky top-0 z-30 border-b border-slate-800 space-y-3">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-cyan-950 border border-cyan-800/50 text-cyan-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                </span>
+                <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Revisão Express</span>
+            </div>
+            <span id="questionCounter" class="text-xs font-extrabold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
+                1 / 4
+            </span>
+        </div>
+
+        <!-- Barra de Progresso Suave -->
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/60">
+            <div id="progressBar" class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500 ease-out" style="width: 25%;"></div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal do Quiz -->
+    <main class="p-4 flex-1 flex flex-col justify-between space-y-4">
+
+        <!-- CONTAINER DA PERGUNTA ATUAL -->
+        <div id="quizContainer" class="space-y-4 my-auto">
+            
+            <!-- Enunciado da Questão -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-2">
+                <span id="categoryBadge" class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/40">
+                    Farmacologia / Bioquímica
+                </span>
+                <h2 id="questionText" class="text-sm sm:text-base font-bold text-white leading-relaxed">
+                    Carregando pergunta...
+                </h2>
+            </div>
+
+            <!-- Opções de Resposta -->
+            <div id="optionsContainer" class="space-y-2.5">
+                <!-- As alternativas serão geradas dinamicamente via JS -->
+            </div>
+
+            <!-- Painel Explicativo (Injetado após selecionar a resposta) -->
+            <div id="explanationPanel" class="hidden rounded-2xl p-4 border transition-all duration-300 space-y-2 shadow-xl">
+                <div class="flex items-center gap-2 font-bold text-xs" id="explanationHeader">
+                    <!-- Ícone e Título (Correto/Incorreto) -->
+                </div>
+                <p id="explanationText" class="text-xs leading-relaxed font-medium">
+                    Explicação detalhada...
+                </p>
+            </div>
+
+        </div>
+
+        <!-- TELA DE RESULTADOS (Oculta por padrão) -->
+        <div id="resultsContainer" class="hidden my-auto space-y-6 text-center py-4">
+            <div class="inline-flex p-4 rounded-full bg-cyan-950 border-2 border-cyan-500/40 text-cyan-400 text-4xl shadow-2xl animate-bounce-subtle">
+                🎓
+            </div>
+
+            <div class="space-y-2">
+                <h2 class="text-xl font-extrabold text-white">Revisão Concluída!</h2>
+                <p class="text-xs text-slate-400 max-w-xs mx-auto">
+                    Confira seu desempenho no quiz sobre os 4 grandes grupos de receptores celulares.
+                </p>
+            </div>
+
+            <!-- Placar de Pontuação -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3 max-w-xs mx-auto">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sua Pontuação</div>
+                <div class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500" id="finalScoreText">
+                    4 / 4
+                </div>
+                <div id="scoreFeedback" class="text-xs font-semibold text-cyan-300 bg-cyan-950/60 p-2 rounded-lg border border-cyan-800/40">
+                    Perfeito!
+                </div>
+            </div>
+
+            <!-- Resumo das Questões -->
+            <div class="text-left bg-slate-900/60 border border-slate-800 rounded-xl p-3 space-y-2 max-w-xs mx-auto text-xs">
+                <div class="font-bold text-slate-300 border-b border-slate-800 pb-1.5 flex justify-between">
+                    <span>Tópicos Revisados:</span>
+                    <span class="text-cyan-400">4 de 4</span>
+                </div>
+                <ul class="space-y-1.5 text-slate-400 text-[11px]">
+                    <li class="flex items-center gap-1.5">⚡ Canal Iônico (Inotrópico)</li>
+                    <li class="flex items-center gap-1.5">🔄 Proteína G (Metabotrópico)</li>
+                    <li class="flex items-center gap-1.5">🧬 Associado a Enzimas (Tirosina Quinase)</li>
+                    <li class="flex items-center gap-1.5">🔑 Intracelular / Nuclear</li>
+                </ul>
+            </div>
+
+            <button onclick="restartQuiz()" class="w-full max-w-xs py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 mx-auto">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refazer Quiz de Fixação
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Rodapé com Botão de Ação -->
+    <footer class="p-4 bg-slate-900 border-t border-slate-800 sticky bottom-0 z-30">
+        <button id="nextBtn" onclick="nextQuestion()" disabled class="w-full py-3.5 px-4 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-not-allowed">
+            <span>Selecione uma alternativa</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+        </button>
+    </footer>
+
+    <!-- LOGICA DO QUIZ EM JAVASCRIPT -->
+    <script>
+        // Banco de Questões Focado nos 4 Tipos Clássicos com Explicações Individuais
+        const questions = [
+            {
+                category: "Velocidade & Mecanismo Rápido",
+                question: "Um paciente necessita de um fármaco com efeito ultra-rápido (na escala de milissegundos) na placa motora muscular. Qual receptor celular atua nesse tempo de resposta?",
+                options: [
+                    {
+                        text: "Receptor Intracelular / Nuclear",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Receptores Intracelulares são os mais lentos (horas a dias), pois dependem da transcrição gênica e síntese de novas proteínas no núcleo celular."
+                    },
+                    {
+                        text: "Canal Iônico Regulado por Ligante (Inotrópico)",
+                        correct: true,
+                        explanation: "<b>Correto! 🎉</b> Os receptores inotrópicos (ex: Nicotínico de Acetilcolina) alteram o fluxo iônico e o potencial elétrico de membrana de forma imediata (milissegundos), sendo os mais rápidos do organismo."
+                    },
+                    {
+                        text: "Receptor Acoplado à Proteína G",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Receptores Metabotropicos dependem de uma cascata de segundos mensageiros (AMPc, IP3, DAG), levando de segundos a minutos para gerar o efeito."
+                    },
+                    {
+                        text: "Receptor Associado a Enzimas (Tirosina Quinase)",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Receptores enzimáticos atuam ativando cascatas de fosforylação de proteínas (minutos a horas), atuando principalmente no metabolismo e crescimento celular."
+                    }
+                ]
+            },
+            {
+                category: "Segundos Mensageiros & Cascata",
+                question: "Receptores metabotrópicos possuem 7 domínios transmembrana e ativam segundos mensageiros como AMPc, IP3 e DAG. Qual dos exemplos abaixo se enquadra nessa categoria?",
+                options: [
+                    {
+                        text: "Receptor de Insulina",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> O Receptor de Insulina é um receptor associado a enzimas (Tirosina Quinase) com atividade catalítica intrínseca."
+                    },
+                    {
+                        text: "Receptor GABA-A",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> O receptor GABA-A é um canal iônico regulado por ligante (inotrópico) que permite a entrada de Cloretos (Cl-)."
+                    },
+                    {
+                        text: "Receptores Adrenérgicos (α e β) e Muscarínicos",
+                        correct: true,
+                        explanation: "<b>Correto! 🎉</b> Os receptores adrenérgicos (alvo da Adrenalina) e muscarínicos (alvo da Acetilcolina no SNA parassimpático) são exemplos clássicos de Receptores Acoplados à Proteína G."
+                    },
+                    {
+                        text: "Receptor de Cortisol e Estrogênio",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Cortisol e Estrogênio são hormônios lipofílicos que atravessam a membrana para se ligar a Receptores Intracelulares/Nucleares."
+                    }
+                ]
+            },
+            {
+                category: "Vias de Crescimento & Metabolismo",
+                question: "O Receptor de Insulina e de Fatores de Crescimento (EGF/VEGF) atuam por dimerização e autofosforylação. Qual é o mecanismo característico dessa classe?",
+                options: [
+                    {
+                        text: "Receptores Associados a Enzimas (Tirosina Quinase)",
+                        correct: true,
+                        explanation: "<b>Correto! 🎉</b> A ligação do ligante induz a dimerização do receptor e a autofosforylação de resíduos de tirosina no seu domínio citoplasmático, ativando cascatas como a via Ras/MAPK."
+                    },
+                    {
+                        text: "Canais Iônicos de Voltagem",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Canais de voltagem abrem em resposta a alterações elétricas na membrana, não possuem domínio catalítico ou tirosina quinase."
+                    },
+                    {
+                        text: "Receptores Acoplados à Proteína G (Gs/Gi/Gq)",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Receptores de Proteína G usam subunidades α, β, γ para ativar adenilil ciclase ou fosfolipase C, e não autofosforylação direta de tirosina."
+                    },
+                    {
+                        text: "Receptores de Membrana sem sinalização secundária",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Os receptores enzimáticos geram profundas cascatas de sinalização metabólica e de expressão gênica que duram de minutos a horas."
+                    }
+                ]
+            },
+            {
+                category: "Ação Genômica & Lipofilicidade",
+                question: "Por que fármacos corticoides (como a Dexametasona) demoram algumas horas para exercerem seu efeito anti-inflamatório máximo no organismo?",
+                options: [
+                    {
+                        text: "Porque precisam abrir canais iônicos de potássio na membrana.",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> Canais iônicos respondem em milissegundos. Se dependesse disso, a resposta do corticoide seria instantânea."
+                    },
+                    {
+                        text: "Porque são bloqueados pela tirosina quinase citoplasmática.",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> A tirosina quinase faz parte de receptores enzimáticos e não impede a ação de corticoides."
+                    },
+                    {
+                        text: "Porque atravessam a membrana e atuam em Receptores Intracelulares/Nucleares modificando o DNA.",
+                        correct: true,
+                        explanation: "<b>Correto! 🎉</b> Os corticoides são lipofílicos e se ligam a receptores citoplasmáticos/nucleares. O complexo atua diretamente no DNA regulando a transcrição de genes, processo que leva de horas a dias."
+                    },
+                    {
+                        text: "Porque dependem do esgotamento prévio de segundos mensageiros como AMPc.",
+                        correct: false,
+                        explanation: "<b>Incorreto!</b> O mecanismo principal do corticoide é a regulação gênica direta (transcrição no núcleo), independente de AMPc."
+                    }
+                ]
+            }
+        ];
+
+        // Estado do Aplicativo
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedOptionIndex = null;
+        let isAnswered = false;
+
+        // Elementos DOM
+        const questionCounterEl = document.getElementById('questionCounter');
+        const progressBarEl = document.getElementById('progressBar');
+        const categoryBadgeEl = document.getElementById('categoryBadge');
+        const questionTextEl = document.getElementById('questionText');
+        const optionsContainerEl = document.getElementById('optionsContainer');
+        const explanationPanelEl = document.getElementById('explanationPanel');
+        const explanationHeaderEl = document.getElementById('explanationHeader');
+        const explanationTextEl = document.getElementById('explanationText');
+        const nextBtnEl = document.getElementById('nextBtn');
+        const quizContainerEl = document.getElementById('quizContainer');
+        const resultsContainerEl = document.getElementById('resultsContainer');
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            loadQuestion();
+        });
+
+        // Carrega a questão atual
+        function loadQuestion() {
+            isAnswered = false;
+            selectedOptionIndex = null;
+
+            const q = questions[currentQuestionIndex];
+
+            // Atualiza Header e Progresso
+            questionCounterEl.innerText = `${currentQuestionIndex + 1} / ${questions.length}`;
+            const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
+            progressBarEl.style.width = `${progressPercent}%`;
+
+            categoryBadgeEl.innerText = q.category;
+            questionTextEl.innerText = q.question;
+
+            // Limpa e esconde explicação anterior
+            explanationPanelEl.className = "hidden rounded-2xl p-4 border transition-all duration-300 space-y-2 shadow-xl";
+            explanationPanelEl.classList.add('hidden');
+
+            // Reseta Botão "Próximo"
+            nextBtnEl.disabled = true;
+            nextBtnEl.className = "w-full py-3.5 px-4 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-not-allowed";
+            nextBtnEl.innerHTML = `
+                <span>Selecione uma alternativa</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                </svg>
+            `;
+
+            // Renderiza Alternativas
+            optionsContainerEl.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-xs text-slate-200 transition-all duration-200 flex items-start justify-between gap-3 group active:scale-[0.99]";
+                btn.onclick = () => selectOption(idx);
+                
+                btn.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <span class="w-5 h-5 rounded-full border border-slate-700 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-slate-400 group-hover:border-cyan-400 group-hover:text-cyan-400 mt-0.5">
+                            ${String.fromCharCode(65 + idx)}
+                        </span>
+                        <span class="font-medium leading-relaxed">${opt.text}</span>
+                    </div>
+                    <span class="status-icon flex-shrink-0"></span>
+                `;
+                optionsContainerEl.appendChild(btn);
+            });
+        }
+
+        // Seleção e Feedback Imediato
+        function selectOption(index) {
+            if (isAnswered) return; // Impede múltiplas escolhas
+            isAnswered = true;
+            selectedOptionIndex = index;
+
+            const q = questions[currentQuestionIndex];
+            const selectedOpt = q.options[index];
+            const buttons = optionsContainerEl.querySelectorAll('button');
+
+            // Verifica se acertou
+            if (selectedOpt.correct) {
+                score++;
+            }
+
+            // Estiliza os botões com base no acerto/erro
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:border-cyan-500/50', 'active:scale-[0.99]');
+
+                const statusIcon = btn.querySelector('.status-icon');
+
+                if (q.options[idx].correct) {
+                    // Alternativa Correta sempre ganha destaque VERDE
+                    btn.className = "w-full text-left p-3.5 rounded-xl bg-emerald-950/40 border-2 border-emerald-500 text-xs text-emerald-200 font-semibold flex items-start justify-between gap-3 shadow-lg shadow-emerald-950/30";
+                    statusIcon.innerHTML = `
+                        <span class="p-1 rounded-full bg-emerald-500 text-slate-950">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </span>
+                    `;
+                } else if (idx === index && !selectedOpt.correct) {
+                    // Alternativa Errada Escolhida ganha destaque VERMELHO
+                    btn.className = "w-full text-left p-3.5 rounded-xl bg-rose-950/40 border-2 border-rose-500 text-xs text-rose-200 font-semibold flex items-start justify-between gap-3 shadow-lg shadow-rose-950/30";
+                    statusIcon.innerHTML = `
+                        <span class="p-1 rounded-full bg-rose-500 text-slate-950">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    `;
+                } else {
+                    // Outras alternativas ficam esmaecidas
+                    btn.className = "w-full text-left p-3.5 rounded-xl bg-slate-900/40 border border-slate-800/50 text-xs text-slate-500 opacity-50 flex items-start justify-between gap-3";
+                }
+            });
+
+            // Exibe o Painel Explicativo com cor temática
+            explanationPanelEl.classList.remove('hidden');
+            
+            if (selectedOpt.correct) {
+                explanationPanelEl.className = "rounded-2xl p-4 border bg-emerald-950/50 border-emerald-800/80 text-emerald-200 space-y-1.5 shadow-xl animate-fade-in";
+                explanationHeaderEl.className = "flex items-center gap-1.5 font-bold text-xs text-emerald-400 uppercase tracking-wider";
+                explanationHeaderEl.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Resposta Correta!</span>
+                `;
+            } else {
+                explanationPanelEl.className = "rounded-2xl p-4 border bg-rose-950/50 border-rose-800/80 text-rose-200 space-y-1.5 shadow-xl animate-fade-in";
+                explanationHeaderEl.className = "flex items-center gap-1.5 font-bold text-xs text-rose-400 uppercase tracking-wider";
+                explanationHeaderEl.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Atenção para o Conceito:</span>
+                `;
+            }
+
+            explanationTextEl.innerHTML = selectedOpt.explanation;
+
+            // Ativa Botão de Próxima Pergunta
+            nextBtnEl.disabled = false;
+            nextBtnEl.className = "w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer animate-bounce-subtle";
+            nextBtnEl.innerHTML = `
+                <span>${currentQuestionIndex < questions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado Final'}</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            `;
+        }
+
+        // Avança para a próxima questão ou finaliza
+        function nextQuestion() {
+            if (!isAnswered) return;
+
+            currentQuestionIndex++;
+
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        // Exibe Tela Final
+        function showResults() {
+            quizContainerEl.classList.add('hidden');
+            nextBtnEl.parentElement.classList.add('hidden'); // Esconde footer
+            resultsContainerEl.classList.remove('hidden');
+
+            document.getElementById('finalScoreText').innerText = `${score} / ${questions.length}`;
+
+            const feedbackEl = document.getElementById('scoreFeedback');
+            if (score === questions.length) {
+                feedbackEl.innerText = "🌟 Perfeito! Domínio total dos receptores celulares!";
+                feedbackEl.className = "text-xs font-semibold text-emerald-300 bg-emerald-950/60 p-2 rounded-lg border border-emerald-800/40";
+            } else if (score >= 2) {
+                feedbackEl.innerText = "👍 Muito bom! Bom domínio dos conceitos fundamentais.";
+                feedbackEl.className = "text-xs font-semibold text-cyan-300 bg-cyan-950/60 p-2 rounded-lg border border-cyan-800/40";
+            } else {
+                feedbackEl.innerText = "📚 Vale a pena refazer para fixar bem os mecanismos!";
+                feedbackEl.className = "text-xs font-semibold text-amber-300 bg-amber-950/60 p-2 rounded-lg border border-amber-800/40";
+            }
+        }
+
+        // Reinicia o Quiz
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            resultsContainerEl.classList.add('hidden');
+            nextBtnEl.parentElement.classList.remove('hidden');
+            quizContainerEl.classList.remove('hidden');
+            loadQuestion();
+        }
+    </script>
+</body>
+</html>
