@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Rápido: Determinação de Umidade e Voláteis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .quiz-card {
+      background: #1e293b;
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      border: 1px solid #334155;
+    }
+
+    .quiz-header {
+      margin-bottom: 20px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: #334155;
+      border-radius: 9999px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #c084fc;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .question-title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #f1f5f9;
+      margin-bottom: 20px;
+    }
+
+    .options-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option-btn {
+      background: #334155;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: #e2e8f0;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      background: #475569;
+      border-color: #64748b;
+    }
+
+    .option-btn.correct {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+
+    .option-btn.wrong {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .option-btn:disabled {
+      cursor: default;
+    }
+
+    .feedback-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .feedback-box.correct-fb {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #a7f3d0;
+    }
+
+    .feedback-box.wrong-fb {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fecaca;
+    }
+
+    .feedback-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .next-btn {
+      margin-top: 16px;
+      width: 100%;
+      background: #c084fc;
+      color: #3b0764;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: none;
+      transition: background 0.2s ease;
+    }
+
+    .next-btn:hover {
+      background: #d8b4fe;
+    }
+
+    .result-screen {
+      text-align: center;
+      display: none;
+    }
+
+    .result-score {
+      font-size: 42px;
+      font-weight: 800;
+      color: #c084fc;
+      margin: 12px 0;
+    }
+
+    .result-msg {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .restart-btn {
+      background: #10b981;
+      color: #022c22;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .restart-btn:hover {
+      background: #34d399;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="quiz-card">
+    <!-- TELA DAS PERGUNTAS -->
+    <div id="quiz-screen">
+      <div class="quiz-header">
+        <span class="badge">Análise de Alimentos • Umidade</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span id="question-counter" style="font-size: 12px; color: #94a3b8;">Pergunta 1 de 4</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="progress-bar" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div id="question-text" class="question-title">Carregando pergunta...</div>
+
+      <div id="options-container" class="options-container"></div>
+
+      <div id="feedback-box" class="feedback-box">
+        <div id="feedback-title" class="feedback-title"></div>
+        <div id="feedback-text"></div>
+      </div>
+
+      <button id="next-btn" class="next-btn" onclick="nextQuestion()">Próxima Pergunta →</button>
+    </div>
+
+    <!-- TELA FINAL -->
+    <div id="result-screen" class="result-screen">
+      <span class="badge">Revisão Concluída</span>
+      <h2 style="font-size: 22px; margin-top: 8px;">Excelente trabalho!</h2>
+      <div id="result-score" class="result-score">0 / 4</div>
+      <p id="result-msg" class="result-msg">Você revisou as diferenças fundamentais entre determinação de umidade, perda de materiais voláteis e o método químico de Karl-Fischer.</p>
+      <button class="restart-btn" onclick="restartQuiz()">Refazer Quiz de Métodos</button>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        question: "Por que os métodos gravimétricos baseados no aquecimento direto da amostra em estufa medem, rigorosamente, 'Materiais Voláteis Totais' e não apenas água?",
+        options: [
+          "Porque a água não evapora completamente em temperaturas abaixo de 150 °C.",
+          "Porque o calor causa a perda concomitante de outras substâncias voláteis (óleos essenciais, álcoois) e a decomposição da amostra.",
+          "Porque a estufa retém a umidade relativa do ar dentro da amostra.",
+          "Porque esses métodos medem apenas a fração de matéria mineral inorgânica."
+        ],
+        correct: 1,
+        explanation: "Métodos que usam calor (gravimétricos) promovem a evaporação não só da água, mas de qualquer composto volátil presente na amostra (ex: óleos essenciais, álcoois, aromas) e podem decompor compostos orgânicos."
+      },
+      {
+        question: "Qual é a principal vantagem de utilizar a 'Estufa a Vácuo' (a 60 °C ou 70 °C) em vez da estufa convencional a 105 °C na análise de alimentos ricos em açúcares ou substâncias sensíveis?",
+        options: [
+          "Permite que a água evapore em temperaturas mais baixas devido à redução da pressão, minimizando a decomposição e caramelização.",
+          "Aumenta a temperatura do ponto de ebulição da água para acelerar o processo.",
+          "Impede totalmente a perda de água livre durante a secagem.",
+          "Oxida os açúcares reduzindo o tempo de análise para metade."
+        ],
+        correct: 0,
+        explanation: "A redução da pressão na estufa a vácuo diminui o ponto de ebulição da água. Isso permite secar a amostra a 60 °C/70 °C sem queimar açúcares (evita Maillard/caramelização) ou decompor a matriz."
+      },
+      {
+        question: "Qual é o princípio fundamental do Método de Karl-Fischer na análise de alimentos e fármacos?",
+        options: [
+          "Secagem sob radiação de infravermelho por meio de pesagem contínua.",
+          "Aquametria química baseada em uma reação estequiométrica quantitativa e específica para a água.",
+          "Extração de substâncias lipídicas seguida de desidratação osmótica.",
+          "Destilação azeotrópica da amostra utilizando tolueno como solvente insolúvel."
+        ],
+        correct: 1,
+        explanation: "O método de Karl-Fischer é uma aquametria baseada na Reação de Karl-Fischer, que reage quimicamente de forma altamente específica e quantitativa com as moléculas de água da amostra."
+      },
+      {
+        question: "Ao analisar uma amostra de condimento rico em óleos essenciais (ex: cravo-da-índia ou canela), qual das estratégias analíticas é a mais adequada para determinar a UMIDADE REAL (água) sem superestimar pelo extravasamento dos óleos?",
+        options: [
+          "Estufa convencional a 105 °C por 24 horas.",
+          "Método químico específico de Karl-Fischer ou Destilação por Arraste (Tolueno).",
+          "Pesagem direta da amostra in natura antes e após incineração em mufla.",
+          "Liofilização seguida de secagem térmica a 120 °C."
+        ],
+        correct: 1,
+        explanation: "Para amostras com alto teor de voláteis não-aquosos (óleos essenciais), a estufa superestima a umidade. Utiliza-se o método de Karl-Fischer (específico para água) ou destilação azeotrópica (Dean-Stark/Tolueno)."
+      }
+    ];
+
+    let currentQuestion = 0;
+    let score = 0;
+
+    function loadQuestion() {
+      const q = questions[currentQuestion];
+      document.getElementById('question-counter').innerText = `Pergunta ${currentQuestion + 1} de ${questions.length}`;
+      document.getElementById('progress-bar').style.width = `${((currentQuestion) / questions.length) * 100}%`;
+      document.getElementById('question-text').innerText = q.question;
+      
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = `<span>${opt}</span>`;
+        btn.onclick = () => selectOption(idx);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('feedback-box').style.display = 'none';
+      document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function selectOption(index) {
+      const q = questions[currentQuestion];
+      const buttons = document.querySelectorAll('.option-btn');
+      const feedbackBox = document.getElementById('feedback-box');
+      const feedbackTitle = document.getElementById('feedback-title');
+      const feedbackText = document.getElementById('feedback-text');
+
+      buttons.forEach(btn => btn.disabled = true);
+
+      if (index === q.correct) {
+        score++;
+        buttons[index].classList.add('correct');
+        feedbackBox.className = 'feedback-box correct-fb';
+        feedbackTitle.innerHTML = '✓ Resposta Correta!';
+      } else {
+        buttons[index].classList.add('wrong');
+        buttons[q.correct].classList.add('correct');
+        feedbackBox.className = 'feedback-box wrong-fb';
+        feedbackTitle.innerHTML = '✕ Resposta Incorreta';
+      }
+
+      feedbackText.innerText = q.explanation;
+      feedbackBox.style.display = 'block';
+      document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+      if (currentQuestion < questions.length) {
+        loadQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.getElementById('quiz-screen').style.display = 'none';
+      document.getElementById('result-screen').style.display = 'block';
+      document.getElementById('result-score').innerText = `${score} / ${questions.length}`;
+    }
+
+    function restartQuiz() {
+      currentQuestion = 0;
+      score = 0;
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('quiz-screen').style.display = 'block';
+      loadQuestion();
+    }
+
+    // Inicializar
+    loadQuestion();
+  </script>
+</body>
+</html>
